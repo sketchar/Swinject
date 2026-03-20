@@ -5,6 +5,7 @@
 /// The ``Assembly`` provides a means to organize your `Service` registration in logic groups which allows
 /// the user to swap out different implementations of `Services` by providing different ``Assembly`` instances
 /// to the ``Assembler``
+@MainActor
 public protocol Assembly {
     /// Provide hook for ``Assembler`` to load Services into the provided container
     ///

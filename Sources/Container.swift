@@ -178,6 +178,9 @@ public final class Container {
     ) -> ServiceEntry<Service> {
         syncIfEnabled {
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
+            if "\(Service.self)".contains("MainPresenter") {
+                NSLog("🟡 REGISTER: service=\(Service.self) args=\(Arguments.self) key=\(key)")
+            }
             let entry = ServiceEntry(
                 serviceType: serviceType,
                 argumentsType: Arguments.self,
@@ -191,6 +194,45 @@ public final class Container {
 
             return entry
         }
+    }
+
+    // MARK: - @MainActor Registration Support
+
+    /// Registers a service with a `@MainActor`-isolated factory closure.
+    /// The closure is wrapped so that it executes via `MainActor.assumeIsolated` at resolve time.
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    @MainActor
+    @discardableResult
+    public func register<Service>(
+        _ serviceType: Service.Type,
+        name: String? = nil,
+        factory: @escaping @MainActor (Resolver) -> Service
+    ) -> ServiceEntry<Service> {
+        let erasedFactory: (Resolver) -> Service = { r in
+            nonisolated(unsafe) var result: Service!
+            MainActor.assumeIsolated { result = factory(r) }
+            return result
+        }
+        return _register(serviceType, factory: erasedFactory, name: name)
+    }
+
+    /// Internal `@MainActor` `_register` for use by argument-based overloads.
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    @MainActor
+    @discardableResult
+    // swiftlint:disable:next identifier_name
+    internal func _registerOnMainActor<Service, Arguments>(
+        _ serviceType: Service.Type,
+        factory: @escaping @MainActor (Arguments) -> Any,
+        name: String? = nil,
+        option: ServiceKeyOption? = nil
+    ) -> ServiceEntry<Service> {
+        let erasedFactory: (Arguments) -> Any = { args in
+            nonisolated(unsafe) var result: Any!
+            MainActor.assumeIsolated { result = factory(args) }
+            return result
+        }
+        return _register(serviceType, factory: erasedFactory, name: name, option: option)
     }
 
     /// Returns a synchronized view of the container for thread safety.
@@ -273,9 +315,17 @@ extension Container: _Resolver {
     ) -> Service? {
         // No need to use weak self since the resolution will be executed before
         // this function exits.
+        NSLog("🟠 _resolve ENTERED: Service=\(Service.self) Arguments=\(Arguments.self)")
         syncIfEnabled {
             var resolvedInstance: Service?
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
+
+            if "\(Service.self)".contains("MainPresenter") {
+                NSLog("🟡 RESOLVE: service=\(Service.self) args=\(Arguments.self) key=\(key)")
+                NSLog("🟡 RESOLVE: services has \(services.count) entries")
+                let match = getEntry(for: key)
+                NSLog("🟡 RESOLVE: entry found = \(match != nil)")
+            }
 
             if key == Self.graphIdentifierKey {
                 return currentObjectGraph as? Service
@@ -387,6 +437,7 @@ extension Container: Resolver {
     /// - Returns: The resolved service type instance, or nil if no registration for the service type and name
     ///            is found in the ``Container``.
     public func resolve<Service>(_: Service.Type, name: String?) -> Service? {
+        NSLog("🔴 RESOLVE(no-arg): Service=\(Service.self)")
         return _resolve(name: name) { (factory: (Resolver) -> Any) in factory(self) }
     }
 

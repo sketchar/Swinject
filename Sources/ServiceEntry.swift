@@ -90,6 +90,19 @@ public final class ServiceEntry<Service>: ServiceEntryProtocol {
         return self
     }
 
+    /// Adds a `@MainActor`-isolated callback to setup the instance after its `init` completes.
+    /// The callback is wrapped to execute via `MainActor.assumeIsolated` at resolve time.
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    @MainActor
+    @discardableResult
+    public func initCompleted(_ completed: @escaping @MainActor (Resolver, Service) -> Void) -> Self {
+        let erasedCompleted: (Resolver, Service) -> Void = { r, s in
+            MainActor.assumeIsolated { completed(r, s) }
+        }
+        initCompletedActions.append(erasedCompleted)
+        return self
+    }
+
     internal func describeWithKey(_ serviceKey: ServiceKey) -> String {
         return description(
             serviceType: serviceType,

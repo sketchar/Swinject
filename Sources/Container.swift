@@ -193,6 +193,45 @@ public final class Container {
         }
     }
 
+    // MARK: - @MainActor Registration Support
+
+    /// Registers a service with a `@MainActor`-isolated factory closure.
+    /// The closure is wrapped so that it executes via `MainActor.assumeIsolated` at resolve time.
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    @MainActor
+    @discardableResult
+    public func register<Service>(
+        _ serviceType: Service.Type,
+        name: String? = nil,
+        factory: @escaping @MainActor (Resolver) -> Service
+    ) -> ServiceEntry<Service> {
+        let erasedFactory: (Resolver) -> Service = { r in
+            nonisolated(unsafe) var result: Service!
+            MainActor.assumeIsolated { result = factory(r) }
+            return result
+        }
+        return _register(serviceType, factory: erasedFactory, name: name)
+    }
+
+    /// Internal `@MainActor` `_register` for use by argument-based overloads.
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    @MainActor
+    @discardableResult
+    // swiftlint:disable:next identifier_name
+    internal func _registerOnMainActor<Service, Arguments>(
+        _ serviceType: Service.Type,
+        factory: @escaping @MainActor (Arguments) -> Any,
+        name: String? = nil,
+        option: ServiceKeyOption? = nil
+    ) -> ServiceEntry<Service> {
+        let erasedFactory: (Arguments) -> Any = { args in
+            nonisolated(unsafe) var result: Any!
+            MainActor.assumeIsolated { result = factory(args) }
+            return result
+        }
+        return _register(serviceType, factory: erasedFactory, name: name, option: option)
+    }
+
     /// Returns a synchronized view of the container for thread safety.
     /// The returned container is ``Resolver`` type and is not the original container. Continuing to add more
     /// registrations after calling `synchronize()` will result in different graph scope.

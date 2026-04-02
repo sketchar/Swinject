@@ -178,7 +178,6 @@ public final class Container {
     ) -> ServiceEntry<Service> {
         syncIfEnabled {
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
-            NSLog("🟢 Swinject REG: service=\(Service.self) args=\(Arguments.self) name=\(name ?? "nil")")
             let entry = ServiceEntry(
                 serviceType: serviceType,
                 argumentsType: Arguments.self,
@@ -317,9 +316,6 @@ extension Container: _Resolver {
             var resolvedInstance: Service?
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
 
-            if getEntry(for: key) == nil {
-                NSLog("🔴 Swinject MISS: service=\(Service.self) args=\(Arguments.self) name=\(name ?? "nil")")
-            }
 
             if key == Self.graphIdentifierKey {
                 return currentObjectGraph as? Service

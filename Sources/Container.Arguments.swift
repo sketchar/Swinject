@@ -238,7 +238,6 @@ extension Container {
         argument: Arg1
     ) -> Service? {
         typealias FactoryType = ((Resolver, Arg1)) -> Any
-        NSLog("🟢 RESOLVE(Arg1): Service=\(Service.self) Arg1=\(Arg1.self)")
         return _resolve(name: name) { (factory: FactoryType) in factory((self, argument)) }
     }
 

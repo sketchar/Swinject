@@ -178,9 +178,6 @@ public final class Container {
     ) -> ServiceEntry<Service> {
         syncIfEnabled {
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
-            if "\(Service.self)".contains("MainPresenter") {
-                NSLog("🟡 REGISTER: service=\(Service.self) args=\(Arguments.self) key=\(key)")
-            }
             let entry = ServiceEntry(
                 serviceType: serviceType,
                 argumentsType: Arguments.self,
@@ -315,17 +312,10 @@ extension Container: _Resolver {
     ) -> Service? {
         // No need to use weak self since the resolution will be executed before
         // this function exits.
-        NSLog("🟠 _resolve ENTERED: Service=\(Service.self) Arguments=\(Arguments.self)")
         syncIfEnabled {
             var resolvedInstance: Service?
             let key = ServiceKey(serviceType: Service.self, argumentsType: Arguments.self, name: name, option: option)
 
-            if "\(Service.self)".contains("MainPresenter") {
-                NSLog("🟡 RESOLVE: service=\(Service.self) args=\(Arguments.self) key=\(key)")
-                NSLog("🟡 RESOLVE: services has \(services.count) entries")
-                let match = getEntry(for: key)
-                NSLog("🟡 RESOLVE: entry found = \(match != nil)")
-            }
 
             if key == Self.graphIdentifierKey {
                 return currentObjectGraph as? Service
@@ -437,7 +427,6 @@ extension Container: Resolver {
     /// - Returns: The resolved service type instance, or nil if no registration for the service type and name
     ///            is found in the ``Container``.
     public func resolve<Service>(_: Service.Type, name: String?) -> Service? {
-        NSLog("🔴 RESOLVE(no-arg): Service=\(Service.self)")
         return _resolve(name: name) { (factory: (Resolver) -> Any) in factory(self) }
     }
 
